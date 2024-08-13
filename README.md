@@ -84,6 +84,12 @@ Before you can enter the admin interface for the first time, you must:
 - Enter password again `Password (again): *********`
 - You will see the message `Superuser created successfully.`
 
+### Initialize the database with test data
+
+To initialize the database with test data, run the following command:
+
+- Run `python manage.py shell < initialize_db.py`
+
 ### Using local machine
 
 - Run `python manage.py runserver` to start the server.
