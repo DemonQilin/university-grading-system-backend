@@ -12,4 +12,6 @@ urlpatterns = [
          subject.list_current_student_subjects, name='current_student_subjects'),
     path('students/<str:username>/summary/',
          subject.get_student_summary, name='student_summary'),
+    path('professors/<str:username>/subjects/',
+         subject.get_professor_subjects, name='professor_subjects'),
 ]

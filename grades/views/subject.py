@@ -6,7 +6,7 @@ from rest_framework import status, exceptions
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from grades.models import Student, Inscription, Subject, CourseInscription
+from grades.models import Student, Inscription, Subject, CourseInscription, Professor
 from grades.serializers.subject import ListCurrentSubjectSerializer, StudentSummarySerializer
 
 
@@ -98,5 +98,33 @@ def get_student_summary(request, username):
         'reprobated': reprobated,
         'canceled': canceled
     })
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary='Get the professor subjects',
+    operation_description='List of subjects related to a professor.',
+    manual_parameters=[
+        openapi.Parameter('username', openapi.IN_PATH, type=openapi.TYPE_STRING,
+                          description='The professor username.', required=True)
+    ],
+)
+@api_view(['GET'])
+def get_professor_subjects(request, username):
+    professor = Professor.objects.filter(username=username).first()
+    if professor is None:
+        raise exceptions.NotFound({'error': 'Professor not found.'})
+
+    if professor.id != request.user.id:
+        raise exceptions.PermissionDenied(
+            {'error': 'The professor information is not available'})
+
+    subjects = Subject.objects.filter(
+        course__professor=professor
+    ).distinct()
+
+    serializer = ListCurrentSubjectSerializer(subjects, many=True)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
