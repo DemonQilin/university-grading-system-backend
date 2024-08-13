@@ -1,5 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import exceptions
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 
@@ -30,22 +31,24 @@ def student_meets_prerequisites(student: Student, subject: Subject) -> bool:
 def create_inscription(request):
     student = Student.objects.filter(id=request.user.id).first()
     if student is None:
-        return Response({'error': 'The user should be a student.'}, status=status.HTTP_400_BAD_REQUEST)
+        raise exceptions.PermissionDenied(
+            {'error': 'The user should be a student.'})
 
     input_serializer = inscription.InscriptionCreationInputSerializer(
         data=request.data)
     if not input_serializer.is_valid():
-        return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise exceptions.ValidationError(input_serializer.errors)
 
     course_ids = input_serializer.data['course_ids']
     courses = Course.objects.filter(id__in=course_ids)
     if len(courses) != len(course_ids):
-        return Response({'error': 'One or more courses do not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+        raise exceptions.ValidationError(
+            {'error': 'One or more courses do not exist.'})
 
     prerequisite_errors = [
         f'Not meet prerequisites for course {course.subject.name}' for course in courses if not student_meets_prerequisites(student, course.subject)]
     if prerequisite_errors:
-        return Response({'error': prerequisite_errors}, status=status.HTTP_400_BAD_REQUEST)
+        raise exceptions.PermissionDenied({'error': prerequisite_errors})
 
     new_inscription = Inscription.objects.create(student=student)
 
