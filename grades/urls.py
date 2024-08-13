@@ -16,4 +16,6 @@ urlpatterns = [
          subject.get_student_summary, name='student_summary'),
     path('professors/<str:username>/subjects/',
          subject.get_professor_subjects, name='professor_subjects'),
+    path('professors/<str:username>/subjects/<uuid:subject_id>/students/',
+         subject.get_students_by_subject, name='students_by_subject'),
 ]

@@ -34,3 +34,26 @@ class StudentSummarySerializer(serializers.Serializer):
 class AssignGradeInputSerializer(serializers.Serializer):
     student = serializers.CharField()
     grade = serializers.FloatField(min_value=0, max_value=5)
+
+
+class StudentsBySubjectParamSerializer(serializers.Serializer):
+    current = serializers.BooleanField(default=False)
+
+
+class StudentsBySubjectSerializer(serializers.ModelSerializer):
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CourseInscription
+        fields = ['first_name', 'last_name', 'grade', 'date']
+
+    def get_first_name(self, obj):
+        return obj.inscription.student.first_name
+
+    def get_last_name(self, obj):
+        return obj.inscription.student.last_name
+
+    def get_date(self, obj):
+        return obj.inscription.date

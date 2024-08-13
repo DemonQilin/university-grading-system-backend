@@ -7,7 +7,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from grades.models import Student, Inscription, Subject, CourseInscription, Professor, Course
-from grades.serializers.subject import ListCurrentSubjectSerializer, StudentSummarySerializer, AssignGradeInputSerializer
+from grades.serializers.subject import ListCurrentSubjectSerializer, StudentSummarySerializer, AssignGradeInputSerializer, StudentsBySubjectSerializer, StudentsBySubjectParamSerializer
 
 
 @swagger_auto_schema(
@@ -177,3 +177,55 @@ def assign_course_grade(request, course_id):
     course_inscription.save()
 
     return Response({'message': 'Grade assigned successfully.'}, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary='Get the students by subject',
+    operation_description='List of students related to a subject.',
+    manual_parameters=[
+        openapi.Parameter('username', openapi.IN_PATH, type=openapi.TYPE_STRING,
+                          description='The professor username.', required=True),
+        openapi.Parameter('subject_id', openapi.IN_PATH, type=openapi.TYPE_STRING,
+                          description='The subject id.', required=True),
+        openapi.Parameter('current', openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN,
+                          description='Filter by students in progress', required=False, default=False)
+    ],
+    responses={200: StudentsBySubjectSerializer(many=True)}
+)
+@api_view(['GET'])
+def get_students_by_subject(request, username, subject_id):
+    professor = Professor.objects.filter(username=username).first()
+    if professor is None:
+        raise exceptions.NotFound({'error': 'Professor not found.'})
+
+    if professor.id != request.user.id:
+        raise exceptions.PermissionDenied(
+            {'error': 'The professor information is not available'})
+
+    subject = Subject.objects.filter(id=subject_id).first()
+    if subject is None:
+        raise exceptions.NotFound({'error': 'Subject not found.'})
+
+    course = Course.objects.filter(
+        professor=professor, subject=subject).first()
+    if course is None:
+        raise exceptions.PermissionDenied(
+            {'error': 'The professor is not related to the subject.'})
+
+    params_serializer = StudentsBySubjectParamSerializer(
+        data=request.query_params)
+    if not params_serializer.is_valid():
+        raise exceptions.ValidationError(params_serializer.errors)
+
+    course_inscriptions = CourseInscription.objects.filter(
+        course=course
+    ).distinct()
+
+    if params_serializer.data['current']:
+        course_inscriptions = course_inscriptions.filter(
+            status=CourseInscription.Status.IN_PROGRESS)
+
+    serializer = StudentsBySubjectSerializer(course_inscriptions, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
