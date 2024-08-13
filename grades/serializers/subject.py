@@ -29,3 +29,8 @@ class StudentSummarySerializer(serializers.Serializer):
     approved = CourseInscriptionSerializer(many=True)
     reprobated = CourseInscriptionSerializer(many=True)
     canceled = CourseInscriptionSerializer(many=True)
+
+
+class AssignGradeInputSerializer(serializers.Serializer):
+    student = serializers.CharField()
+    grade = serializers.FloatField(min_value=0, max_value=5)

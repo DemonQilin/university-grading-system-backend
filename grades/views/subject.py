@@ -6,8 +6,8 @@ from rest_framework import status, exceptions
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from grades.models import Student, Inscription, Subject, CourseInscription, Professor
-from grades.serializers.subject import ListCurrentSubjectSerializer, StudentSummarySerializer
+from grades.models import Student, Inscription, Subject, CourseInscription, Professor, Course
+from grades.serializers.subject import ListCurrentSubjectSerializer, StudentSummarySerializer, AssignGradeInputSerializer
 
 
 @swagger_auto_schema(
@@ -128,3 +128,52 @@ def get_professor_subjects(request, username):
     serializer = ListCurrentSubjectSerializer(subjects, many=True)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='patch',
+    operation_summary='Assign a grade to a student',
+    operation_description='Assign a grade to a student in a course.',
+    manual_parameters=[
+        openapi.Parameter('course_id', openapi.IN_PATH, type=openapi.TYPE_INTEGER,
+                          description='The course id.', required=True)
+    ],
+    request_body=AssignGradeInputSerializer,
+    responses={200: openapi.Response(
+        description='Grade assigned successfully.')}
+)
+@api_view(['PATCH'])
+def assign_course_grade(request, course_id):
+    course = Course.objects.filter(id=course_id).first()
+    if course is None:
+        raise exceptions.NotFound({'error': 'Course not found.'})
+
+    if course.professor.id != request.user.id:
+        raise exceptions.PermissionDenied(
+            {'error': 'Only the professor can assign grades.'})
+
+    input_serializer = AssignGradeInputSerializer(data=request.data)
+    if not input_serializer.is_valid():
+        raise exceptions.ValidationError(input_serializer.errors)
+
+    data = input_serializer.data
+    student = Student.objects.filter(username=data['student']).first()
+    if student is None:
+        raise exceptions.NotFound({'error': 'Student not found.'})
+
+    course_inscription = CourseInscription.objects.filter(
+        inscription__student=student,
+        course=course,
+        status=CourseInscription.Status.IN_PROGRESS
+    ).order_by('-inscription__date').first()
+
+    if course_inscription is None:
+        raise exceptions.NotFound(
+            {'error': 'Student is not enrolled in the course.'})
+
+    course_inscription.grade = data['grade']
+    course_inscription.status = CourseInscription.Status.APPROVED if data[
+        'grade'] >= 3 else CourseInscription.Status.REJECTED
+    course_inscription.save()
+
+    return Response({'message': 'Grade assigned successfully.'}, status=status.HTTP_200_OK)

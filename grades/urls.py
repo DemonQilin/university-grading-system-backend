@@ -6,6 +6,8 @@ app_name = 'grades'
 
 urlpatterns = [
     path('courses/', course.CourseListView.as_view(), name='course_list'),
+    path('courses/<int:course_id>/',
+         subject.assign_course_grade, name='assign_grade'),
     path('inscriptions/', inscription.create_inscription,
          name='inscription_creation'),
     path('students/<str:username>/current-subjects/',
