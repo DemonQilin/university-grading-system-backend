@@ -62,7 +62,7 @@ class CourseInscription(models.Model):
 
     inscription = models.ForeignKey(Inscription, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    grade = models.SmallIntegerField(
+    grade = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(5)], null=True)
     status = models.CharField(
         max_length=2, choices=Status.choices, default=Status.IN_PROGRESS)
