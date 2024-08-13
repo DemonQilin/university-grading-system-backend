@@ -9,5 +9,7 @@ urlpatterns = [
     path('inscriptions/', inscription.create_inscription,
          name='inscription_creation'),
     path('students/<str:username>/current-subjects/',
-         subject.list_current_student_subjects, name='current_student_subjects')
+         subject.list_current_student_subjects, name='current_student_subjects'),
+    path('students/<str:username>/summary/',
+         subject.get_student_summary, name='student_summary'),
 ]
